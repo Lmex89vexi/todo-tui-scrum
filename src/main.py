@@ -30,6 +30,11 @@ class TodoApp(App):
     #task_input { display: none; }
     #filter_input { display: none; }
     #status { height: 1; }
+    DataTable:focus > .datatable--cursor {
+        background: $accent;
+        color: $text;
+        text-style: bold;
+    }
     """
 
     BINDINGS = [
@@ -54,7 +59,7 @@ class TodoApp(App):
             yield DataTable(id="table")
             with Vertical(id="inputs"):
                 yield Input(placeholder="New task", id="task_input")
-                yield Input(placeholder="Filter (status:pending, tag:work)", id="filter_input")
+                yield Input(placeholder="Filter (defaults to work tag)", id="filter_input")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -71,14 +76,28 @@ class TodoApp(App):
         with SqlAlchemyUnitOfWork() as uow:
             rows = uow.todos.list(self.filter_text or None)
             for todo in rows:
+                tags_display = self._format_tags(todo.tags)
                 table.add_row(
                     str(todo.id),
                     todo.task,
                     todo.status,
-                    todo.tags,
+                    tags_display,
                     todo.due_date.isoformat() if todo.due_date else "",
                     key=str(todo.id),
                 )
+
+    @staticmethod
+    def _format_tags(raw_tags: str) -> str:
+        if not raw_tags:
+            return ""
+        tags = [tag.strip() for tag in raw_tags.split(",") if tag.strip()]
+        rendered: list[str] = []
+        for tag in tags:
+            if tag.lower() == "urgent":
+                rendered.append("[red]urgent[/red]")
+            else:
+                rendered.append(tag)
+        return ",".join(rendered)
 
     def action_cursor_down(self) -> None:
         self.query_one("#table", DataTable).action_cursor_down()
@@ -180,6 +199,24 @@ def _acquire_startup_lock(force_unlock: bool) -> None:
     LockService().acquire(force=force_unlock)
 
 
+def _apply_default_tags_to_existing(force: bool = False) -> bool:
+    raw = os.getenv("TODO_DEFAULT_TASK_TAGS", "work").strip()
+    if not raw:
+        return False
+    tags = [tag.strip() for tag in raw.split(",") if tag.strip()]
+    if not tags:
+        return False
+    with SqlAlchemyUnitOfWork() as uow:
+        marker = uow.todos.get_setting("default_tags_applied")
+        if marker == "1" and not force:
+            return False
+        updated = uow.todos.apply_default_tags_to_untagged(tags)
+        uow.todos.set_setting("default_tags_applied", "1")
+    if updated:
+        logger.debug("Applied default tags to {count} tasks", count=updated)
+    return updated > 0
+
+
 def _release_if_clean(state: DbState) -> None:
     if state.dirty:
         logger.debug("Dirty session, lock retained")
@@ -194,6 +231,11 @@ def run(argv: Iterable[str] | None = None) -> None:
         "--force-unlock",
         action="store_true",
         help="Force unlock database",
+    )
+    parser.add_argument(
+        "--apply-default-tags",
+        action="store_true",
+        help="Apply default tags to existing tasks",
     )
     args = parser.parse_args(list(argv) if argv is not None else None)
 
@@ -213,6 +255,7 @@ def run(argv: Iterable[str] | None = None) -> None:
     )
     logger.debug("App starting")
     _acquire_startup_lock(args.force_unlock)
+    _apply_default_tags_to_existing(force=args.apply_default_tags)
 
     app = TodoApp(force_unlock=args.force_unlock)
     try:

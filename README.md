@@ -77,6 +77,29 @@ Example:
 Comprar cafe #compras #urgente @2023-12-31
 ```
 
+## Filtering
+
+Open the filter with `/`, type a query, and press Enter.
+
+- Status: `status:pending`, `status:completed`
+- Short aliases: `stat:completed`, `s:done`
+- Tags: `tag:work`, `t:work`, `#work`
+- Multiple values: `status:pending,completed`, `tag:work,home`
+- Plain text matches task content
+
+### Filter Configuration
+
+- `TODO_FILTER_DEFAULT_TAGS` sets default tags for filtering (comma-separated)
+- `TODO_FILTER_ALIASES` adds alias pairs like `status=st,stt;tag=label,l`
+
+## Default Tags
+
+Existing tasks with empty tags get default tags applied once at startup.
+
+- `TODO_DEFAULT_TASK_TAGS` (default: `work`)
+- Set `TODO_DEFAULT_TASK_TAGS=""` to disable the one-time update
+- Use `--apply-default-tags` to re-run the update later
+
 ## Logs
 
 Debug logs are written to `pytodo.log` in the project root.
