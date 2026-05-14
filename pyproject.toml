@@ -1,0 +1,22 @@
+[project]
+name = "pytodo-tui"
+version = "0.1.0"
+description = "PyTodo-TUI: teclado first todo manager"
+requires-python = ">=3.10"
+dependencies = [
+  "textual>=0.50",
+  "SQLAlchemy>=2.0",
+  "loguru>=0.7",
+  "psycopg>=3.1",
+]
+
+[project.scripts]
+todo = "main:run"
+
+[build-system]
+requires = ["setuptools>=69.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["main", "database", "models", "commands", "repositories", "unit_of_work"]
+package-dir = {"" = "src"}
