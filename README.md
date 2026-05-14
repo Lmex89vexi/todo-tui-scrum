@@ -18,6 +18,41 @@ uv sync
 uv run todo
 ```
 
+## Install as Global Command (Linux)
+
+```bash
+uv tool install -e .
+```
+
+This installs the `todo` command in your user environment. If the command is
+not found, ensure `~/.local/bin` is in your `PATH`.
+
+Uninstall:
+
+```bash
+uv tool uninstall pytodo-tui
+```
+
+System-wide (requires sudo):
+
+```bash
+sudo uv tool install -e .
+```
+
+### Install/Uninstall Scripts
+
+```bash
+./scripts/install.sh
+./scripts/uninstall.sh
+```
+
+System-wide:
+
+```bash
+./scripts/install.sh --system
+./scripts/uninstall.sh --system
+```
+
 ## Database
 
 - Default: `sqlite:///./todo.db`
