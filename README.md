@@ -3,6 +3,8 @@
 PyTodo-TUI is a keyboard-first, single-user task manager with a Vim-style TUI.
 It uses SQLite by default and supports PostgreSQL via `TODO_DB_URL`.
 
+For agent-specific workflow hints, see `AGENTS.md`.
+
 ## Setup
 
 ```bash
