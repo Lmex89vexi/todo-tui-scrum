@@ -54,7 +54,7 @@ class TodoApp(App):
             yield DataTable(id="table")
             with Vertical(id="inputs"):
                 yield Input(placeholder="New task", id="task_input")
-                yield Input(placeholder="Filter", id="filter_input")
+                yield Input(placeholder="Filter (status:pending, tag:work)", id="filter_input")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -90,10 +90,14 @@ class TodoApp(App):
         table = self.query_one("#table", DataTable)
         if table.row_count == 0:
             return None
-        key = table.get_row_key(table.cursor_row)
-        if key is None:
+        cursor_row = table.cursor_row
+        if cursor_row is None:
             return None
-        return int(key)
+        try:
+            key = table.ordered_rows[cursor_row].key
+        except IndexError:
+            return None
+        return int(str(key.value))
 
     def action_toggle_done(self) -> None:
         todo_id = self._selected_id()
