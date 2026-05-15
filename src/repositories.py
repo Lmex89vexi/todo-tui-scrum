@@ -31,6 +31,7 @@ class SqlAlchemyTodoRepository:
         aliases: dict[str, set[str]] = {
             "status": {"status", "stat", "s"},
             "tag": {"tag", "t"},
+            "deleted": {"deleted", "del", "d", "is_deleted"},
         }
         raw = os.getenv("TODO_FILTER_ALIASES", "").strip()
         if not raw:
@@ -70,11 +71,12 @@ class SqlAlchemyTodoRepository:
 
     def _parse_filter_query(
         self, query: str
-    ) -> tuple[list[str], list[str], list[str]]:
+    ) -> tuple[list[str], list[str], list[str], bool | None]:
         aliases = self._load_filter_aliases()
         status_values: list[str] = []
         tag_values: list[str] = self._load_default_tags()
         text_terms: list[str] = []
+        deleted_filter: bool | None = None
 
         for token in query.split():
             if token.startswith("#") and len(token) > 1:
@@ -88,6 +90,9 @@ class SqlAlchemyTodoRepository:
                 if not value:
                     continue
                 if key in aliases["status"]:
+                    if value.lower() in {"deleted", "removed", "trash", "trashed"}:
+                        deleted_filter = True
+                        continue
                     for item in value.split(","):
                         item = item.strip()
                         if item:
@@ -100,15 +105,32 @@ class SqlAlchemyTodoRepository:
                         if item:
                             tag_values.append(item)
                     continue
+                if key in aliases["deleted"]:
+                    normalized = value.lower()
+                    if normalized in {"1", "true", "yes", "y", "only"}:
+                        deleted_filter = True
+                    elif normalized in {"0", "false", "no", "n", "active"}:
+                        deleted_filter = False
+                    elif normalized in {"all", "any"}:
+                        deleted_filter = None
+                    continue
             text_terms.append(token)
 
-        return status_values, tag_values, text_terms
+        return status_values, tag_values, text_terms, deleted_filter
 
     def list(self, query: str | None = None) -> list[Todo]:
-        statement = select(Todo).where(Todo.is_deleted.is_(False))
+        statement = select(Todo)
         if query:
-            status_values, tag_values, text_terms = self._parse_filter_query(query)
+            status_values, tag_values, text_terms, deleted_filter = (
+                self._parse_filter_query(query)
+            )
             conditions = []
+            if deleted_filter is True:
+                conditions.append(Todo.is_deleted.is_(True))
+            elif deleted_filter is False:
+                conditions.append(Todo.is_deleted.is_(False))
+            else:
+                conditions.append(Todo.is_deleted.is_(False))
             if status_values:
                 conditions.append(Todo.status.in_(status_values))
             if tag_values:
@@ -128,6 +150,8 @@ class SqlAlchemyTodoRepository:
                     conditions.append(Todo.task.ilike(like))
             if conditions:
                 statement = statement.where(and_(*conditions))
+        else:
+            statement = statement.where(Todo.is_deleted.is_(False))
         return list(self._session.scalars(statement).all())
 
     def apply_default_tags_to_untagged(self, default_tags: list[str]) -> int:

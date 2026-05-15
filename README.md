@@ -84,6 +84,7 @@ Open the filter with `/`, type a query, and press Enter.
 - Status: `status:pending`, `status:completed`, `status:cancelled`
 - Short aliases: `stat:completed`, `s:done`
 - Tags: `tag:work`, `t:work`, `#work`
+- Deleted: `deleted:true`, `deleted:false`, `deleted:all`
 - Multiple values: `status:pending,completed`, `tag:work,home`
 - Plain text matches task content
 
