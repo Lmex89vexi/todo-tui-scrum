@@ -19,6 +19,8 @@ class Todo(Base):
     tags: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=datetime.utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class DbLock(Base):

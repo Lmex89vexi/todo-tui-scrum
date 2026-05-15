@@ -62,6 +62,8 @@ class SqlAlchemyTodoRepository:
         normalized = value.strip().lower()
         if normalized in {"done", "complete", "completed", "c"}:
             return "completed"
+        if normalized in {"cancelled", "canceled", "cancel", "cancelado"}:
+            return "cancelled"
         if normalized in {"pending", "todo", "p"}:
             return "pending"
         return normalized

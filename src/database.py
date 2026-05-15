@@ -24,6 +24,8 @@ def init_db(engine) -> None:
     logger.debug("Initializing database schema")
     Base.metadata.create_all(engine)
     _ensure_todo_soft_delete_column(engine)
+    _ensure_todo_created_at_column(engine)
+    _ensure_todo_completed_at_column(engine)
 
 
 def _ensure_todo_soft_delete_column(engine) -> None:
@@ -39,6 +41,34 @@ def _ensure_todo_soft_delete_column(engine) -> None:
             text(
                 "ALTER TABLE todos ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0"
             )
+        )
+
+
+def _ensure_todo_created_at_column(engine) -> None:
+    inspector = inspect(engine)
+    if "todos" not in inspector.get_table_names():
+        return
+    columns = {column["name"] for column in inspector.get_columns("todos")}
+    if "created_at" in columns:
+        return
+    logger.debug("Adding missing todos.created_at column")
+    with engine.begin() as connection:
+        connection.execute(
+            text("ALTER TABLE todos ADD COLUMN created_at DATETIME")
+        )
+
+
+def _ensure_todo_completed_at_column(engine) -> None:
+    inspector = inspect(engine)
+    if "todos" not in inspector.get_table_names():
+        return
+    columns = {column["name"] for column in inspector.get_columns("todos")}
+    if "completed_at" in columns:
+        return
+    logger.debug("Adding missing todos.completed_at column")
+    with engine.begin() as connection:
+        connection.execute(
+            text("ALTER TABLE todos ADD COLUMN completed_at DATETIME")
         )
 
 

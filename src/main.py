@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import os
+from datetime import datetime
 from typing import Iterable
 
 from loguru import logger
@@ -17,6 +18,7 @@ from unit_of_work import DbState, LockService, SqlAlchemyUnitOfWork
 
 STATUS_PENDING = "pending"
 STATUS_COMPLETED = "completed"
+STATUS_CANCELLED = "cancelled"
 
 
 class StatusBar(Static):
@@ -41,6 +43,7 @@ class TodoApp(App):
         Binding("j", "cursor_down", "Down"),
         Binding("k", "cursor_up", "Up"),
         Binding("x", "toggle_done", "Toggle"),
+        Binding("c", "cancel_task", "Cancel"),
         Binding("i", "open_insert", "Insert"),
         Binding("a", "open_insert", "Append"),
         Binding("/", "open_filter", "Filter"),
@@ -66,10 +69,14 @@ class TodoApp(App):
         logger.debug("TUI mounted")
         table = self.query_one("#table", DataTable)
         table.cursor_type = "row"
-        table.add_columns("ID", "Task", "Status", "Tags", "Due")
+        table.add_columns("ID", "Task", "Status", "Tags", "Due", "Created", "Completed")
         self.refresh_table()
 
-    def refresh_table(self) -> None:
+    def refresh_table(
+        self,
+        selected_id: int | None = None,
+        selected_row: int | None = None,
+    ) -> None:
         logger.debug("Refreshing table")
         table = self.query_one("#table", DataTable)
         table.clear()
@@ -83,8 +90,29 @@ class TodoApp(App):
                     todo.status,
                     tags_display,
                     todo.due_date.isoformat() if todo.due_date else "",
+                    self._format_timestamp(todo.created_at),
+                    self._format_timestamp(todo.completed_at),
                     key=str(todo.id),
                 )
+        target_index: int | None = None
+        if selected_id is not None:
+            target = str(selected_id)
+            for index, row in enumerate(table.ordered_rows):
+                if str(row.key.value) == target:
+                    target_index = index
+                    break
+        if target_index is None and selected_row is not None and table.row_count:
+            target_index = min(selected_row, table.row_count - 1)
+        if target_index is not None:
+            table.call_after_refresh(self._move_cursor_to_row, target_index)
+
+    def _move_cursor_to_row(self, index: int) -> None:
+        table = self.query_one("#table", DataTable)
+        if table.row_count == 0:
+            return
+        if index < 0 or index >= table.row_count:
+            return
+        table.move_cursor(row=index, animate=False, scroll=False)
 
     @staticmethod
     def _format_tags(raw_tags: str) -> str:
@@ -98,6 +126,12 @@ class TodoApp(App):
             else:
                 rendered.append(tag)
         return ",".join(rendered)
+
+    @staticmethod
+    def _format_timestamp(value: datetime | None) -> str:
+        if value is None:
+            return ""
+        return value.isoformat(sep=" ", timespec="minutes")
 
     def action_cursor_down(self) -> None:
         self.query_one("#table", DataTable).action_cursor_down()
@@ -122,6 +156,8 @@ class TodoApp(App):
         todo_id = self._selected_id()
         if todo_id is None:
             return
+        table = self.query_one("#table", DataTable)
+        selected_row = table.cursor_row
         with SqlAlchemyUnitOfWork() as uow:
             todo = uow.todos.get(todo_id)
             if todo is None:
@@ -132,14 +168,37 @@ class TodoApp(App):
                 if todo.status != STATUS_COMPLETED
                 else STATUS_PENDING
             )
+            if todo.status == STATUS_COMPLETED:
+                todo.completed_at = datetime.utcnow()
+            else:
+                todo.completed_at = None
             self.state.dirty = True
             logger.debug("Todo toggled: {id}", id=todo_id)
-        self.refresh_table()
+        self.refresh_table(selected_id=todo_id, selected_row=selected_row)
+
+    def action_cancel_task(self) -> None:
+        todo_id = self._selected_id()
+        if todo_id is None:
+            return
+        table = self.query_one("#table", DataTable)
+        selected_row = table.cursor_row
+        with SqlAlchemyUnitOfWork() as uow:
+            todo = uow.todos.get(todo_id)
+            if todo is None:
+                logger.warning("Todo not found for cancel: {id}", id=todo_id)
+                return
+            todo.status = STATUS_CANCELLED
+            todo.completed_at = None
+            self.state.dirty = True
+            logger.debug("Todo cancelled: {id}", id=todo_id)
+        self.refresh_table(selected_id=todo_id, selected_row=selected_row)
 
     def action_delete_task(self) -> None:
         todo_id = self._selected_id()
         if todo_id is None:
             return
+        table = self.query_one("#table", DataTable)
+        selected_row = table.cursor_row
         with SqlAlchemyUnitOfWork() as uow:
             todo = uow.todos.get(todo_id)
             if todo is None:
@@ -148,7 +207,7 @@ class TodoApp(App):
             uow.todos.remove(todo)
             self.state.dirty = True
             logger.debug("Todo deleted: {id}", id=todo_id)
-        self.refresh_table()
+        self.refresh_table(selected_row=selected_row)
 
     def action_open_insert(self) -> None:
         task_input = self.query_one("#task_input", Input)

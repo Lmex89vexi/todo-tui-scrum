@@ -81,7 +81,7 @@ Comprar cafe #compras #urgente @2023-12-31
 
 Open the filter with `/`, type a query, and press Enter.
 
-- Status: `status:pending`, `status:completed`
+- Status: `status:pending`, `status:completed`, `status:cancelled`
 - Short aliases: `stat:completed`, `s:done`
 - Tags: `tag:work`, `t:work`, `#work`
 - Multiple values: `status:pending,completed`, `tag:work,home`
