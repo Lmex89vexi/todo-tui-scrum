@@ -12,6 +12,14 @@ uv venv
 uv sync
 ```
 
+### Alternative setup with pip
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requeriments.pip
+```
+
 ## Run
 
 ```bash

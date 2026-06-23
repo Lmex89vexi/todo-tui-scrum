@@ -1,0 +1,4 @@
+textual>=0.50
+SQLAlchemy>=2.0
+loguru>=0.7
+psycopg>=3.1
