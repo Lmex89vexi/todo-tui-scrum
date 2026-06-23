@@ -44,6 +44,7 @@ class TodoApp(App):
         Binding("k", "cursor_up", "Up"),
         Binding("x", "toggle_done", "Toggle"),
         Binding("c", "cancel_task", "Cancel"),
+        Binding("u", "restore_task", "Restore"),
         Binding("i", "open_insert", "Insert"),
         Binding("a", "open_insert", "Append"),
         Binding("/", "open_filter", "Filter"),
@@ -54,7 +55,7 @@ class TodoApp(App):
         super().__init__()
         self.force_unlock = force_unlock
         self.state = DbState(dirty=False)
-        self.filter_text = ""
+        self.filter_text = "status:pending"
 
     def compose(self) -> ComposeResult:
         yield StatusBar("PyTodo-TUI")
@@ -191,6 +192,31 @@ class TodoApp(App):
             todo.completed_at = None
             self.state.dirty = True
             logger.debug("Todo cancelled: {id}", id=todo_id)
+        self.refresh_table(selected_id=todo_id, selected_row=selected_row)
+
+    def action_restore_task(self) -> None:
+        todo_id = self._selected_id()
+        if todo_id is None:
+            return
+        table = self.query_one("#table", DataTable)
+        selected_row = table.cursor_row
+        with SqlAlchemyUnitOfWork() as uow:
+            todo = uow.todos.get(todo_id)
+            if todo is None:
+                logger.warning("Todo not found for restore: {id}", id=todo_id)
+                return
+            updated = False
+            if todo.is_deleted:
+                todo.is_deleted = False
+                updated = True
+            if todo.status == STATUS_CANCELLED:
+                todo.status = STATUS_PENDING
+                todo.completed_at = None
+                updated = True
+            if not updated:
+                return
+            self.state.dirty = True
+            logger.debug("Todo restored: {id}", id=todo_id)
         self.refresh_table(selected_id=todo_id, selected_row=selected_row)
 
     def action_delete_task(self) -> None:

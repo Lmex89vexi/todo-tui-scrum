@@ -71,12 +71,13 @@ class SqlAlchemyTodoRepository:
 
     def _parse_filter_query(
         self, query: str
-    ) -> tuple[list[str], list[str], list[str], bool | None]:
+    ) -> tuple[list[str], list[str], list[str], bool | None, bool]:
         aliases = self._load_filter_aliases()
         status_values: list[str] = []
         tag_values: list[str] = self._load_default_tags()
         text_terms: list[str] = []
         deleted_filter: bool | None = None
+        deleted_filter_set = False
 
         for token in query.split():
             if token.startswith("#") and len(token) > 1:
@@ -92,6 +93,7 @@ class SqlAlchemyTodoRepository:
                 if key in aliases["status"]:
                     if value.lower() in {"deleted", "removed", "trash", "trashed"}:
                         deleted_filter = True
+                        deleted_filter_set = True
                         continue
                     for item in value.split(","):
                         item = item.strip()
@@ -109,26 +111,30 @@ class SqlAlchemyTodoRepository:
                     normalized = value.lower()
                     if normalized in {"1", "true", "yes", "y", "only"}:
                         deleted_filter = True
+                        deleted_filter_set = True
                     elif normalized in {"0", "false", "no", "n", "active"}:
                         deleted_filter = False
+                        deleted_filter_set = True
                     elif normalized in {"all", "any"}:
                         deleted_filter = None
+                        deleted_filter_set = True
                     continue
             text_terms.append(token)
 
-        return status_values, tag_values, text_terms, deleted_filter
+        return status_values, tag_values, text_terms, deleted_filter, deleted_filter_set
 
     def list(self, query: str | None = None) -> list[Todo]:
         statement = select(Todo)
         if query:
-            status_values, tag_values, text_terms, deleted_filter = (
+            status_values, tag_values, text_terms, deleted_filter, deleted_filter_set = (
                 self._parse_filter_query(query)
             )
             conditions = []
-            if deleted_filter is True:
-                conditions.append(Todo.is_deleted.is_(True))
-            elif deleted_filter is False:
-                conditions.append(Todo.is_deleted.is_(False))
+            if deleted_filter_set:
+                if deleted_filter is True:
+                    conditions.append(Todo.is_deleted.is_(True))
+                elif deleted_filter is False:
+                    conditions.append(Todo.is_deleted.is_(False))
             else:
                 conditions.append(Todo.is_deleted.is_(False))
             if status_values:
