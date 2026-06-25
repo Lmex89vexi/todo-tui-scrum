@@ -137,17 +137,16 @@ class SqlAlchemyTodoRepository:
         return aliases
 
     def _load_default_tags(self) -> list[str]:
-        """Load default tags from environment variables.
+        """Load default tags from TODO_FILTER_DEFAULT_TAGS environment variable.
 
-        Checks TODO_FILTER_DEFAULT_TAGS first, falls back to TODO_DEFAULT_TASK_TAGS.
-        Used when no tags are explicitly provided in filter queries.
+        Applied as an implicit tag filter when no explicit tag filter is provided.
+        Does NOT fall back to TODO_DEFAULT_TASK_TAGS — that variable is only
+        for applying default tags to tasks, not for filtering.
 
         Returns:
             List of default tag strings (empty list if none configured).
         """
         raw = os.getenv("TODO_FILTER_DEFAULT_TAGS", "").strip()
-        if not raw:
-            raw = os.getenv("TODO_DEFAULT_TASK_TAGS", "work").strip()
         if not raw:
             return []
         tags = [tag.strip() for tag in raw.split(",")]
