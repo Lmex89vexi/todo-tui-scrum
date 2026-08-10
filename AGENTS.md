@@ -2,6 +2,7 @@
 
 ## Architecture Rules: SOLID + Factory Pattern
 
+# as Mandatory
 This project enforces strict adherence to SOLID principles with Factory Pattern for object creation:
 
 1. **Single Responsibility**: Each class has exactly one reason to change.
@@ -28,6 +29,12 @@ This project enforces strict adherence to SOLID principles with Factory Pattern 
 
 ---
 
+
+# as Mandatory 
+use codegraph to visualize the architecture and dependencies of the project. This will help ensure that the SOLID principles are being followed and that the Factory Pattern is correctly implemented, 
+use codegraph over you own tools calls unless query is not satified fall back to your own tools, and provide a visual representation of the architecture and dependencies of the project.
+
+
 ## Documentation Rules: PEP-257 (Mandatory)
 
 This project enforces PEP-257 docstrings **always** for Python code.
@@ -41,6 +48,46 @@ This project enforces PEP-257 docstrings **always** for Python code.
 4. For non-trivial callables, document `Args`, `Returns`, and `Raises` explicitly.
 5. Docstrings must explain intent and contract (the **why/what**), not duplicate obvious implementation details.
 6. Any code change that adds/modifies Python symbols must add/update docstrings in the same change.
+
+---
+
+## Commit Rules: Conventional Commits (Mandatory)
+
+This project enforces the **Conventional Commits 1.0.0** specification for all commits.
+
+1. **Format**: `<type>[optional scope]: <description>`
+
+   ```
+   feat: allow provided config object to extend other configs
+   ^--^  ^--------------------------------------------^
+   |     |
+   |     +-> Summary in imperative mood, no period
+   |
+   +-------> Type: feat, fix, build, chore, ci, docs, style, refactor, perf, test, revert
+   ```
+
+2. **Types** (mandatory for all commits):
+   - `feat` — new feature (SemVer MINOR)
+   - `fix` — bug fix (SemVer PATCH)
+   - `build` — build system or external dependency changes
+   - `chore` — maintenance, tooling, config changes
+   - `ci` — CI configuration or scripts
+   - `docs` — documentation only
+   - `style` — formatting, whitespace (no logic change)
+   - `refactor` — code change that neither fixes a bug nor adds a feature
+   - `perf` — performance improvement
+   - `test` — adding or fixing tests
+   - `revert` — reverts a previous commit
+
+3. **Breaking changes**: Append `!` after type/scope (e.g., `feat!:`) or add a `BREAKING CHANGE:` footer. Correlates with SemVer MAJOR.
+
+4. **Atomic commits**: Each commit must be a **logically separate change**. If the description grows too long, split into finer-grained commits.
+
+5. **Subject line**: 50-character soft limit, imperative mood ("add feature" not "added feature" or "adds feature"), no trailing period.
+
+6. **Body** (optional but encouraged): Blank line after subject, then explain **why** the change was made (context, rationale, alternatives considered).
+
+7. **Footers** (optional): Use for issue references, co-authors, breaking change notes.
 
 ---
 
